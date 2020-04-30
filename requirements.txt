@@ -1,8 +1,11 @@
 absl-py
+atari-py
 attrs
+dopamine-rl
 gin-config
 gym
 matplotlib
+mock
 monty
 more_itertools
 networkx
@@ -14,5 +17,3 @@ sklearn
 statsmodels
 tensorflow==1.15
 tqdm
-dopamine-rl
-atari-py
