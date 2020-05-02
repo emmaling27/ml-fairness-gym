@@ -276,16 +276,16 @@ def do_plotting(maximize_reward_result,
     plot_credit_distribution(
         maximize_reward_result['metric_results']['initial_credit_distribution'],
         'Initial',
-        path=os.path.join(plotting_dir, 'initial.pdf'))
+        path=os.path.join(plotting_dir, 'initial.png'))
     plot_credit_distribution(
         maximize_reward_result['metric_results']['final_credit_distributions'],
         title=MAX_UTIL_TITLE,
-        path=os.path.join(plotting_dir, 'max_utility.pdf'))
+        path=os.path.join(plotting_dir, 'max_utility.png'))
     plot_credit_distribution(
         equality_of_opportunity_result['metric_results']
         ['final_credit_distributions'],
         title=EQ_OPP_TITLE,
-        path=os.path.join(plotting_dir, 'equalize_opportunity.pdf'))
+        path=os.path.join(plotting_dir, 'equalize_opportunity.png'))
 
   if PlotTypes.CUMULATIVE_LOANS in options:
     cumulative_loans = {
@@ -295,20 +295,19 @@ def do_plotting(maximize_reward_result,
             equality_of_opportunity_result['metric_results']['cumulative_loans']
     }
     plot_cumulative_loans(
-        cumulative_loans, os.path.join(plotting_dir, 'cumulative_loans.pdf'))
+        cumulative_loans, os.path.join(plotting_dir, 'cumulative_loans.png'))
 
   if PlotTypes.THRESHOLD_HISTORY in options:
     plot_threshold_history(
         equality_of_opportunity_result['agent']['threshold_history'],
-        os.path.join(plotting_dir, 'threshold_history.pdf'))
+        os.path.join(plotting_dir, 'threshold_history.png'))
 
   if PlotTypes.MEAN_CREDIT_OVER_TIME in options:
     histories = {
         'max reward': maximize_reward_result['environment']['history'],
         'equal-opp': equality_of_opportunity_result['environment']['history']
     }
-
-    plot_mu(histories, os.path.join(plotting_dir, 'mu.pdf'))
+    plot_mu(histories, os.path.join(plotting_dir, 'mu.png'))
 
   if PlotTypes.CUMULATIVE_RECALLS in options:
 
@@ -327,7 +326,7 @@ def do_plotting(maximize_reward_result,
 
     plot_recall_targets(
         equality_of_opportunity_result['agent']['tpr_targets'][(0, 1)],
-        os.path.join(plotting_dir, 'target_recall_dynamic.pdf'))
+        os.path.join(plotting_dir, 'target_recall_dynamic.png'))
 
     with file_util.open(
         os.path.join(plotting_dir, 'cumulative_recall_static.txt'),
