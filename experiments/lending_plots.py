@@ -236,7 +236,7 @@ def plot_distribution_difference(histories, path):
 
   plt.xticks(fontsize=12)
   plt.yticks(fontsize=12)
-  plt.ylabel('P(will repay|G=1) - P(will repay|G=2)', fontsize=16)
+  plt.ylabel('Diff', fontsize=16)
   plt.xlabel('# Steps', fontsize=16)
   plt.legend(loc='upper left', fontsize=12)
   plt.grid(color='k', linewidth=0.5, axis='y')
