@@ -49,6 +49,7 @@ class PlotTypes(enum.Enum):
   THRESHOLD_HISTORY = 3
   MEAN_CREDIT_OVER_TIME = 4
   CUMULATIVE_RECALLS = 5
+  DISTRIBUTION_DIFFERENCE = 6
 
 
 def _write(path):
@@ -217,6 +218,32 @@ def plot_mu(histories, path):
   _write(path)
 
 
+def _distribution_difference(step, group1, group2):
+  """Computes the difference between distributions of group1 and group2."""
+  return _mu(step, group1) - _mu(step, group2)
+
+
+def plot_distribution_difference(histories, path):
+  """Plots the difference between credit distributions."""
+  plt.figure(figsize=(8, 3))
+  plt.title('Difference in Distributions', fontsize=16)
+  colors = ['b', 'g']
+  for title, history in histories.items():
+    plt.plot(
+      [_distribution_difference(step, 0, 1) for step in history],
+      label='%s' % title,
+      linewidth=3)
+
+  plt.xticks(fontsize=12)
+  plt.yticks(fontsize=12)
+  plt.ylabel('P(will repay|G=1) - P(will repay|G=2)', fontsize=16)
+  plt.xlabel('# Steps', fontsize=16)
+  plt.legend(loc='upper left', fontsize=12)
+  plt.grid(color='k', linewidth=0.5, axis='y')
+  plt.tight_layout()
+  _write(path)
+
+
 def plot_cumulative_recall_differences(cumulative_recalls, path):
   """Plot differences in cumulative recall between groups up to time T."""
   plt.figure(figsize=(8, 3))
@@ -308,6 +335,13 @@ def do_plotting(maximize_reward_result,
         'equal-opp': equality_of_opportunity_result['environment']['history']
     }
     plot_mu(histories, os.path.join(plotting_dir, 'mu.png'))
+
+  if PlotTypes.DISTRIBUTION_DIFFERENCE in options:
+    histories = {
+        'max reward': maximize_reward_result['environment']['history'],
+        'equal-opp': equality_of_opportunity_result['environment']['history']
+    }
+    plot_distribution_difference(histories, os.path.join(plotting_dir, 'distribution_difference.png'))
 
   if PlotTypes.CUMULATIVE_RECALLS in options:
 
