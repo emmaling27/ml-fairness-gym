@@ -466,8 +466,8 @@ class Metric(object):
                realign_fn = None):
     # A copy of the environment is used so that simulations do not affect
     # the history of the environment being measured.
-    self._environment = copy.deepcopy(environment)
-    self._environment_setter = self._environment._set_state  # pylint: disable=protected-access
+    # self._environment = copy.deepcopy(environment)
+    # self._environment_setter = self._environment._set_state  # pylint: disable=protected-access
     self._realign_fn = realign_fn
 
   def _simulate(self, state, action):
