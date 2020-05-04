@@ -63,6 +63,34 @@ class ThresholdPoliciesTest(absltest.TestCase):
 
     self.assertLess(np.abs(group_a_recall - group_b_recall), 1e-3)
 
+  def test_equalized_odds_holds(self):
+    rng = np.random.RandomState(100)
+    group_a_predictions = rng.rand(100000)
+    group_a_labels = rng.choice([0, 1], p=[0.5, 0.5], size=100000)
+
+    group_b_predictions = rng.normal(size=100000)
+    group_b_labels = rng.choice([0, 1], p=[0.2, 0.8], size=100000)
+
+    thresholds = threshold_policies.equalized_odds_thresholds(
+        group_predictions={
+            'a': group_a_predictions,
+            'b': group_b_predictions
+        },
+        group_labels={
+            'a': group_a_labels,
+            'b': group_b_labels
+        },
+        group_weights=None,
+        cost_matrix=COST_MATRIX,
+        rng=rng)
+
+    group_a_recall = ((group_a_predictions > thresholds['a'].sample()) *
+                      group_a_labels).sum() / group_a_labels.sum()
+    group_b_recall = ((group_b_predictions > thresholds['b'].sample()) *
+                      group_b_labels).sum() / group_b_labels.sum()
+
+    self.assertLess(np.abs(group_a_recall - group_b_recall), 1e-3)
+
   def test_reward_is_maximized(self):
     rng = np.random.RandomState(100)
     predictions = rng.rand(10000)

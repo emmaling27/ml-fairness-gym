@@ -171,10 +171,6 @@ def _threshold_from_tpr_and_fpr(roc, tpr_target, fpr_target, rng):
     return RandomizedThreshold(
         weights=[1], values=[thresh_list[-1]], rng=rng, tpr_target=tpr_target, fpr_target=fpr_target)
 
-  # Case TPR exceeds list
-
-  # Case FPR exceeds list
-
   # TPR and FPR targets are exactly achievable by an existing threshold. In this
   # case, do not randomize between different thresholds. Use a single threshold
   # with probability 1.
@@ -182,17 +178,44 @@ def _threshold_from_tpr_and_fpr(roc, tpr_target, fpr_target, rng):
     return RandomizedThreshold(
         weights=[1], values=[thresh_list[idx_tpr]], rng=rng, tpr_target=tpr_target, fpr_target=fpr_target)
 
-  
-
+  # TPR and FPR agree on a threshold index but don't have the same values.
   # Interpolate between adjacent thresholds. Since we are only considering
   # points on the convex hull of the roc curve, we only need to consider
   # interpolating between pairs of adjacent points.
-  alpha = _interpolate(x=tpr_target, low=tpr_list[idx - 1], high=tpr_list[idx])
-  return RandomizedThreshold(
-      weights=[alpha, 1 - alpha],
-      values=[thresh_list[idx - 1], thresh_list[idx]],
-      rng=rng,
-      tpr_target=tpr_target)
+  if idx_tpr==idx_fpr: 
+    alpha = _interpolate(x=tpr_target, low=tpr_list[idx_tpr - 1], high=tpr_list[idx_tpr])
+    beta = _interpolate(x=fpr_target, low=fpr_list[idx_fpr - 1], high=fpr_list[idx_fpr])
+    avg = (alpha + beta) / 2
+    return RandomizedThreshold(
+        weights=[avg, 1 - avg],
+        values=[thresh_list[idx_tpr - 1], thresh_list[idx_tpr]],
+        rng=rng,
+        tpr_target=tpr_target, 
+        fpr_target=fpr_target)
+
+  # Given different locations of the FPR and TPR optimal, uses a least squared
+  # loss to find an optimal threshold between the two
+  def minimize_gap(tpr_target, fpr_target, fpr_list, tpr_list, thresh_list, low, high):
+    min_loss = 1000
+    min_loss_idx = -1
+    for idx in range(low, high):
+      loss = abs(tpr_list[idx] - tpr_target)**2 + abs(tpr_list[idx] - tpr_target)**2
+      if loss < min_loss:
+        min_loss = loss 
+        min_loss_idx = idx
+    return min_loss_idx
+
+  # TPR threshold is higher than FPR
+  if idx_tpr > idx_fpr:
+    idx = minimize_gap(tpr_target, fpr_target, fpr_list, tpr_list, thresh_list, idx_fpr, idx_tpr)
+    return RandomizedThreshold(
+        weights=[1], values=[thresh_list[idx]], rng=rng, tpr_target=tpr_target, fpr_target=fpr_target)
+  
+  # TPR threshold is higher than FPR
+  if idx_fpr > idx_tpr:
+    idx = minimize_gap(tpr_target, fpr_target, fpr_list, tpr_list, thresh_list, idx_tpr, idx_fpr)
+    return RandomizedThreshold(
+        weights=[1], values=[thresh_list[idx]], rng=rng, tpr_target=tpr_target, fpr_target=fpr_target)
 
 
 def _interpolate(x, low, high):
@@ -302,6 +325,7 @@ def equality_of_opportunity_thresholds(group_predictions,
       bounds=[0, 1],
       method="bounded",
       options={"maxiter": 100})
+  print(opt)
   return ({
       group: _threshold_from_tpr(roc[group], opt.x, rng=rng) for group in groups
   })
@@ -362,8 +386,10 @@ def equalized_odds_thresholds(group_predictions,
     
     roc[group] = (fprs, np.nan_to_num(tprs), thresholds)
 
-  def negative_reward(tpr_target, fpr_target):
+  def negative_reward(targets):
     """Returns negative reward suitable for optimization by minimization."""
+
+    tpr_target, fpr_target = targets
 
     my_reward = 0
     for group in groups:
@@ -383,12 +409,14 @@ def equalized_odds_thresholds(group_predictions,
       my_reward += np.multiply(confusion_matrix, cost_matrix.as_array()).sum()
     return -my_reward
 
-  # TODO(@cabreraem): need to find optimal for TPR and FPR
-  opt = scipy.optimize.minimize_scalar(
+  # TODO(@cabreraem): need to find optimal for TPR and FPR. I think this works
+  # but need to check that opt.x is an array
+  opt = scipy.optimize.minimize(
       negative_reward,
-      bounds=[0, 1],
-      method="bounded",
+      [0.5, 0.5],
+      bounds=((0, 1), (0,1)),
       options={"maxiter": 100})
+  print(opt)
   return ({
-      group: _threshold_from_tpr_and_fpr(roc[group], opt.x, rng=rng) for group in groups
+      group: _threshold_from_tpr_and_fpr(roc[group], opt.x[0], opt.x[1], rng=rng) for group in groups
   })

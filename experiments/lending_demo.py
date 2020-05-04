@@ -34,6 +34,8 @@ flags.DEFINE_string('outfile', None, 'Path to write out results.')
 flags.DEFINE_string('plots_directory', None, 'Directory to write out plots.')
 flags.DEFINE_bool('equalize_opportunity', False,
                   'If true, apply equality of opportunity constraints.')
+flags.DEFINE_bool('equalize_odds', False,
+                  'If true, apply equalized odds constraints.')
 flags.DEFINE_integer('num_steps', 10000,
                      'Number of steps to run the simulation.')
 
@@ -44,7 +46,7 @@ json.encoder.FLOAT_REPR = lambda o: repr(round(o, 3))
 
 MAXIMIZE_REWARD = threshold_policies.ThresholdPolicy.MAXIMIZE_REWARD
 EQUALIZE_OPPORTUNITY = threshold_policies.ThresholdPolicy.EQUALIZE_OPPORTUNITY
-
+EQUALIZE_ODDS = threshold_policies.ThresholdPolicy.EQUALIZE_ODDS
 
 def main(argv):
   if len(argv) > 1:
@@ -62,10 +64,12 @@ def main(argv):
       cluster_shift_increment=0.01,
       include_cumulative_loans=True,
       return_json=False,
-      threshold_policy=(EQUALIZE_OPPORTUNITY if FLAGS.equalize_opportunity else
+      threshold_policy=(EQUALIZE_ODDS if FLAGS.equalize_odds else
                         MAXIMIZE_REWARD)).run()
 
   title = ('Eq. opportunity' if FLAGS.equalize_opportunity else 'Max reward')
+  title = ('Eq. Odds' if FLAGS.equalize_odds else 'Max reward')
+
   metrics = result['metric_results']
 
   # Standalone figure of initial credit distribution
