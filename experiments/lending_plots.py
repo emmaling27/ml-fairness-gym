@@ -230,7 +230,7 @@ def _distribution_difference(credit_distribution, distance_metric):
   group1_dist = np.array(credit_distribution['0']) # Better-off group
   group2_dist = np.array(credit_distribution['1'])
   if distance_metric == DistanceMetrics.TOTAL_VARIATION:
-    return np.max(group1_dist - group2_dist)
+    return np.max(np.abs(group1_dist - group2_dist))
   elif distance_metric == DistanceMetrics.KL_DIVERGENCE:
     # KL divergence undefined if prob = 0, so we approximate 0 by .01
     group1_dist[group1_dist == 0] = .01
