@@ -78,6 +78,13 @@ class ConfusionMatrix(object):
       return 0
     return self.tp / (self.tp + self.fp)
 
+  @property
+  def fall_out(self):
+    if (self.fp + self.tn) == 0:
+      logging.warning('Measuring fall out with 0 denominator.')
+      return 0
+    return self.fp / (self.fp + self.tn)
+
 
 @gin.configurable
 class AccuracyMetric(core.Metric):
@@ -300,4 +307,23 @@ class PrecisionMetric(ConfusionMetric):
     result = super(PrecisionMetric, self).measure(env)
     return {
         stratum: confusion.precision for stratum, confusion in result.items()
+    }
+
+
+@gin.configurable
+class FallOutMetric(ConfusionMetric):
+  """Computes fall out."""
+
+  def measure(self, env):
+    """Returns fall out: fp / (fp + tn).
+
+    Args:
+      env: An environment.
+
+    Returns:
+      Stratified recall.
+    """
+    result = super(FallOutMetric, self).measure(env)
+    return {
+        stratum: confusion.fall_out for stratum, confusion in result.items()
     }
