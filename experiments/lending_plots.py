@@ -56,6 +56,7 @@ class DistanceMetrics(enum.Enum):
   # MEAN = 1
   TOTAL_VARIATION = 2
   KL_DIVERGENCE = 3
+  EARTH_MOVER = 4
 
 
 def _write(path):
@@ -235,7 +236,11 @@ def _distribution_difference(credit_distribution, distance_metric):
     group1_dist[group1_dist == 0] = .01
     group2_dist[group2_dist == 0] = .01
     return np.sum(group1_dist * np.log(group1_dist / group2_dist))
-
+  elif distance_metric == DistanceMetrics.EARTH_MOVER:
+    dist = [0]
+    for i in range(group1_dist.size):
+      dist.append(group1_dist[i] + dist[i] - group2_dist[i])
+    return np.sum(np.abs(dist))
 
 def plot_distribution_distance(envs, histories, path, distance_metric):
   """Plots the difference between credit distributions."""
