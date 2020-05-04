@@ -52,6 +52,11 @@ class PlotTypes(enum.Enum):
   CUMULATIVE_RECALLS = 5
   DISTRIBUTION_DISTANCE = 6
 
+class DistanceMetrics(enum.Enum):
+  # MEAN = 1
+  TOTAL_VARIATION = 2
+  KL_DIVERGENCE = 3
+
 
 def _write(path):
   """Write a plot to a path."""
@@ -219,34 +224,43 @@ def plot_mu(histories, path):
   _write(path)
 
 
-def _distribution_difference(credit_distribution, step):
+def _distribution_difference(credit_distribution, distance_metric):
   """Computes the difference between distributions of group1 and group2."""
-  return np.max(
-    np.array(credit_distribution['0']) - np.array(credit_distribution['1']))
+  group1_dist = np.array(credit_distribution['0']) # Better-off group
+  group2_dist = np.array(credit_distribution['1'])
+  if distance_metric == DistanceMetrics.TOTAL_VARIATION:
+    return np.max(group1_dist - group2_dist)
+  elif distance_metric == DistanceMetrics.KL_DIVERGENCE:
+    # KL divergence undefined if prob = 0, so we approximate 0 by .01
+    group1_dist[group1_dist == 0] = .01
+    group2_dist[group2_dist == 0] = .01
+    return np.sum(group1_dist * np.log(group1_dist / group2_dist))
 
 
-def plot_distribution_distance(envs, histories, path):
+def plot_distribution_distance(envs, histories, path, distance_metric):
   """Plots the difference between credit distributions."""
   plt.figure(figsize=(8, 3))
-  plt.title('Distance between Group Distributions', fontsize=16)
+  plt.title(
+    distance_metric.name.lower() + ' distance between group 1 and group 2',
+    fontsize=16)
   colors = ['b', 'g']
   for title, history in histories.items():
     plt.plot(
-      [_distribution_difference(
-        lending_metrics.CreditDistribution(
+      [_distribution_difference(lending_metrics.CreditDistribution(
             envs[title],
-            step=step).measure(envs[title]), step)
+            step=step).measure(envs[title]), distance_metric)
         for step in range(len(history))],
       label='%s' % title)
 
   plt.xticks(fontsize=12)
   plt.yticks(fontsize=12)
-  plt.ylabel('Distance', fontsize=16)
+  plt.ylabel(distance_metric.name.lower() + ' distance', fontsize=16)
   plt.xlabel('# Steps', fontsize=16)
   plt.legend(loc='upper left', fontsize=12)
   plt.grid(color='k', linewidth=0.5, axis='y')
   plt.tight_layout()
-  _write(path)
+  _write(path.split(sep='.')[0] \
+    + '_' + distance_metric.name.lower() + '.' + path.split(sep='.')[1])
 
 
 def plot_cumulative_recall_differences(cumulative_recalls, path):
@@ -350,7 +364,11 @@ def do_plotting(maximize_reward_result,
         'max reward': maximize_reward_result['environment']['env'],
         'equal-opp': equality_of_opportunity_result['environment']['env']
     }
-    plot_distribution_distance(envs, histories, os.path.join(plotting_dir, 'distribution_distance.png'))
+    for distance_metric in DistanceMetrics:
+        plot_distribution_distance(envs,
+          histories,
+          os.path.join(plotting_dir, 'distribution_distance.png'),
+          distance_metric)
 
   if PlotTypes.CUMULATIVE_RECALLS in options:
 
