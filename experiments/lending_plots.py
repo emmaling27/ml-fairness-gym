@@ -33,6 +33,7 @@ mpl.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.linalg as linalg
+from metrics import lending_metrics
 # pylint: enable=g-import-not-at-top
 
 mpl.rcParams['axes.grid'] = False
@@ -49,7 +50,13 @@ class PlotTypes(enum.Enum):
   THRESHOLD_HISTORY = 3
   MEAN_CREDIT_OVER_TIME = 4
   CUMULATIVE_RECALLS = 5
-  DISTRIBUTION_DIFFERENCE = 6
+  DISTRIBUTION_DISTANCE = 6
+
+class DistanceMetrics(enum.Enum):
+  # MEAN = 1
+  TOTAL_VARIATION = 2
+  KL_DIVERGENCE = 3
+  EARTH_MOVER = 4
 
 
 def _write(path):
@@ -218,30 +225,47 @@ def plot_mu(histories, path):
   _write(path)
 
 
-def _distribution_difference(step, group1, group2):
+def _distribution_difference(credit_distribution, distance_metric):
   """Computes the difference between distributions of group1 and group2."""
-  return _mu(step, group1) - _mu(step, group2)
+  group1_dist = np.array(credit_distribution['0']) # Better-off group
+  group2_dist = np.array(credit_distribution['1'])
+  if distance_metric == DistanceMetrics.TOTAL_VARIATION:
+    return np.max(np.abs(group1_dist - group2_dist))
+  elif distance_metric == DistanceMetrics.KL_DIVERGENCE:
+    # KL divergence undefined if prob = 0, so we approximate 0 by .01
+    group1_dist[group1_dist == 0] = .01
+    group2_dist[group2_dist == 0] = .01
+    return np.sum(group1_dist * np.log(group1_dist / group2_dist))
+  elif distance_metric == DistanceMetrics.EARTH_MOVER:
+    dist = [0]
+    for i in range(group1_dist.size):
+      dist.append(group1_dist[i] + dist[i] - group2_dist[i])
+    return np.sum(np.abs(dist))
 
-
-def plot_distribution_difference(histories, path):
+def plot_distribution_distance(envs, histories, path, distance_metric):
   """Plots the difference between credit distributions."""
   plt.figure(figsize=(8, 3))
-  plt.title('Difference in Distributions', fontsize=16)
+  plt.title(
+    distance_metric.name.lower() + ' distance between group 1 and group 2',
+    fontsize=16)
   colors = ['b', 'g']
   for title, history in histories.items():
     plt.plot(
-      [_distribution_difference(step, 0, 1) for step in history],
-      label='%s' % title,
-      linewidth=3)
+      [_distribution_difference(lending_metrics.CreditDistribution(
+            envs[title],
+            step=step).measure(envs[title]), distance_metric)
+        for step in range(len(history))],
+      label='%s' % title)
 
   plt.xticks(fontsize=12)
   plt.yticks(fontsize=12)
-  plt.ylabel('Diff', fontsize=16)
+  plt.ylabel(distance_metric.name.lower() + ' distance', fontsize=16)
   plt.xlabel('# Steps', fontsize=16)
   plt.legend(loc='upper left', fontsize=12)
   plt.grid(color='k', linewidth=0.5, axis='y')
   plt.tight_layout()
-  _write(path)
+  _write(path.split(sep='.')[0] \
+    + '_' + distance_metric.name.lower() + '.' + path.split(sep='.')[1])
 
 
 def plot_cumulative_recall_differences(cumulative_recalls, path):
@@ -336,12 +360,20 @@ def do_plotting(maximize_reward_result,
     }
     plot_mu(histories, os.path.join(plotting_dir, 'mu.png'))
 
-  if PlotTypes.DISTRIBUTION_DIFFERENCE in options:
+  if PlotTypes.DISTRIBUTION_DISTANCE in options:
     histories = {
         'max reward': maximize_reward_result['environment']['history'],
         'equal-opp': equality_of_opportunity_result['environment']['history']
     }
-    plot_distribution_difference(histories, os.path.join(plotting_dir, 'distribution_difference.png'))
+    envs = {
+        'max reward': maximize_reward_result['environment']['env'],
+        'equal-opp': equality_of_opportunity_result['environment']['env']
+    }
+    for distance_metric in DistanceMetrics:
+        plot_distribution_distance(envs,
+          histories,
+          os.path.join(plotting_dir, 'distribution_distance.png'),
+          distance_metric)
 
   if PlotTypes.CUMULATIVE_RECALLS in options:
 
