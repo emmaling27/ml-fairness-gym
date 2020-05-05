@@ -27,7 +27,7 @@ import numpy as np
 from six.moves import range
 from sklearn import metrics as sklearn_metrics
 
-COST_MATRIX = params.CostMatrix(tp=1.5, fp=-1.0, fn=-0.3, tn=2.0)
+COST_MATRIX = params.CostMatrix(fn=0, fp=-1, tp=0.1, tn=0)
 EPSILON = 1e-6
 
 

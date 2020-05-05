@@ -1,17 +1,16 @@
-# coding=utf-8
-# Copyright 2020 The ML Fairness Gym Authors.
+# coding=utf-8 Copyright 2020 The ML Fairness Gym Authors.
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy of
+# the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations under
+# the License.
 
 """Main file to run lending experiments for demonstration purposes."""
 
@@ -33,6 +32,10 @@ import simplejson as json
 flags.DEFINE_string('plots_directory', None, 'Directory to write out plots.')
 flags.DEFINE_bool('equalize_opportunity', False,
                   'If true, apply equality of opportunity constraints.')
+flags.DEFINE_bool('epsilon_equalize_opportunity', False,
+                  'If true, apply epsilon equality of opportunity constraints.')
+flags.DEFINE_bool('equalize_odds', False,
+                  'If true, apply equalized odds constraints.')
 flags.DEFINE_integer('num_steps', 10000,
                      'Number of steps to run the simulation.')
 
@@ -43,7 +46,8 @@ json.encoder.FLOAT_REPR = lambda o: repr(round(o, 3))
 
 MAXIMIZE_REWARD = threshold_policies.ThresholdPolicy.MAXIMIZE_REWARD
 EQUALIZE_OPPORTUNITY = threshold_policies.ThresholdPolicy.EQUALIZE_OPPORTUNITY
-
+EQUALIZE_ODDS = threshold_policies.ThresholdPolicy.EQUALIZE_ODDS
+EPSILON_EQUALIZE_OPPORTUNITY = threshold_policies.ThresholdPolicy.EPSILON_EQUALIZE_OPPORTUNITY
 
 def main(argv):
     if len(argv) > 1:
@@ -72,13 +76,36 @@ def main(argv):
         include_cumulative_loans=True,
         return_json=False,
         threshold_policy=EQUALIZE_OPPORTUNITY).run()
+    # epsilon_equality_of_opportunity_result = lending.Experiment(
+    #     group_0_prob=group_0_prob,
+    #     interest_rate=1.0,
+    #     bank_starting_cash=10000,
+    #     seed=200,
+    #     num_steps=FLAGS.num_steps,
+    #     burnin=200,
+    #     cluster_shift_increment=0.01,
+    #     include_cumulative_loans=True,
+    #     return_json=False,
+    #     threshold_policy=EPSILON_EQUALIZE_OPPORTUNITY).run()
+    equalize_odds_result = lending.Experiment(
+        group_0_prob=group_0_prob,
+        interest_rate=1.0,
+        bank_starting_cash=10000,
+        seed=200,
+        num_steps=FLAGS.num_steps,
+        burnin=200,
+        cluster_shift_increment=0.01,
+        include_cumulative_loans=True,
+        return_json=False,
+        threshold_policy=EQUALIZE_ODDS).run()
 
     lending_plots.do_plotting(maximize_reward_result,
-                  equality_of_opportunity_result,
-                  equality_of_opportunity_result,
-                  # static_equality_of_opportunity_result,
-                  FLAGS.plots_directory,
-                  options=None)
+                            equality_of_opportunity_result,
+                            equality_of_opportunity_result,
+                            #epsilon_equality_of_opportunity_result,
+                            equalize_odds_result,
+                            FLAGS.plots_directory,
+                            options=None)
 
 
 if __name__ == '__main__':

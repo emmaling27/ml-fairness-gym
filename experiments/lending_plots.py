@@ -1,17 +1,16 @@
-# coding=utf-8
-# Copyright 2020 The ML Fairness Gym Authors.
+# coding=utf-8 Copyright 2020 The ML Fairness Gym Authors.
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy of
+# the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations under
+# the License.
 
 # Lint as: python2, python3
 """Helper functions to create plots for lending experiments."""
@@ -41,6 +40,8 @@ mpl.rcParams['figure.facecolor'] = 'white'
 
 MAX_UTIL_TITLE = 'Max Utility'
 EQ_OPP_TITLE = 'Eq. Opportunity'
+EPS_EQ_OPP_TITLE = 'Epsilon Eq. Opportunity'
+EQ_ODDS_TITLE = 'Eq. Odds'
 SUCCESS_PROBABILITIES = lending_params.DELAYED_IMPACT_SUCCESS_PROBS
 
 
@@ -302,22 +303,17 @@ def plot_recall_targets(recall_targets, path):
 
 def do_plotting(maximize_reward_result,
                 equality_of_opportunity_result,
-                static_equality_of_opportunity_result,
+                epsilon_equality_of_opportunity_result,
+                equalize_odds_result,
                 plotting_dir,
                 options=None):
   """Creates plots and writes them to a directory.
 
-  Args:
-    maximize_reward_result: The results from an experiment with a max-util
-      agent.
-    equality_of_opportunity_result: The results from an experiment with an
-      agent constrained by equality of opportunity.
-    static_equality_of_opportunity_result: The results from an experiment with
-      an agent constrained by equality of opportunity without long-term credit
-      dynamics.
-    plotting_dir: A directory to write the plots.
-    options: A set of PlotType enums that indicate which plots to create.
-      If None, create everything.
+  Args: maximize_reward_result: The results from an experiment with a max-util
+    agent. equality_of_opportunity_result: The results from an experiment with
+    an agent constrained by equality of opportunity. plotting_dir: A directory
+    to write the plots. options: A set of PlotType enums that indicate which
+    plots to create. If None, create everything.
   """
 
   if options is None:
@@ -337,13 +333,27 @@ def do_plotting(maximize_reward_result,
         ['final_credit_distributions'],
         title=EQ_OPP_TITLE,
         path=os.path.join(plotting_dir, 'equalize_opportunity.png'))
+    # plot_credit_distribution(
+    #     epsilon_equality_of_opportunity_result['metric_results']
+    #     ['final_credit_distributions'],
+    #     title=EPS_EQ_OPP_TITLE,
+    #     path=os.path.join(plotting_dir, 'epsilon_equalize_opportunity.png'))
+    plot_credit_distribution(
+        equalize_odds_result['metric_results']
+        ['final_credit_distributions'],
+        title=EQ_ODDS_TITLE,
+        path=os.path.join(plotting_dir, 'equalize_odds.png'))
 
   if PlotTypes.CUMULATIVE_LOANS in options:
     cumulative_loans = {
         'max reward':
             maximize_reward_result['metric_results']['cumulative_loans'],
         'equal-opp':
-            equality_of_opportunity_result['metric_results']['cumulative_loans']
+            equality_of_opportunity_result['metric_results']['cumulative_loans'],
+        # 'eps-equal-opp':
+        #     epsilon_equality_of_opportunity_result['metric_results']['cumulative_loans'],
+        'equal-odds':
+            equalize_odds_result['metric_results']['cumulative_loans']
     }
     plot_cumulative_loans(
         cumulative_loans, os.path.join(plotting_dir, 'cumulative_loans.png'))
@@ -351,23 +361,37 @@ def do_plotting(maximize_reward_result,
   if PlotTypes.THRESHOLD_HISTORY in options:
     plot_threshold_history(
         equality_of_opportunity_result['agent']['threshold_history'],
-        os.path.join(plotting_dir, 'threshold_history.png'))
+        os.path.join(plotting_dir, 'threshold_history_equal_opp.png'))
+    # plot_threshold_history(
+    #     epsilon_equality_of_opportunity_result['agent']['threshold_history'],
+    #     os.path.join(plotting_dir, 'threshold_history_epsilon_equal_opp.png'))
+    plot_threshold_history(
+        equalize_odds_result['agent']['threshold_history'],
+        os.path.join(plotting_dir, 'threshold_history_equal_odds.png'))
 
   if PlotTypes.MEAN_CREDIT_OVER_TIME in options:
     histories = {
         'max reward': maximize_reward_result['environment']['history'],
-        'equal-opp': equality_of_opportunity_result['environment']['history']
+        'equal-opp': equality_of_opportunity_result['environment']['history'],
     }
     plot_mu(histories, os.path.join(plotting_dir, 'mu.png'))
 
   if PlotTypes.DISTRIBUTION_DISTANCE in options:
     histories = {
         'max reward': maximize_reward_result['environment']['history'],
-        'equal-opp': equality_of_opportunity_result['environment']['history']
+        'equal-opp': equality_of_opportunity_result['environment']['history'],
+        # 'eps-equal-opp':
+        #     epsilon_equality_of_opportunity_result['environment']['history'],
+        'equal-odds':
+            equalize_odds_result['environment']['history']
     }
     envs = {
         'max reward': maximize_reward_result['environment']['env'],
-        'equal-opp': equality_of_opportunity_result['environment']['env']
+        'equal-opp': equality_of_opportunity_result['environment']['env'],
+        # 'eps-equal-opp':
+        #     epsilon_equality_of_opportunity_result['environment']['env'],
+        'equal-odds':
+            equalize_odds_result['environment']['env']
     }
     for distance_metric in DistanceMetrics:
         plot_distribution_distance(envs,
@@ -393,10 +417,3 @@ def do_plotting(maximize_reward_result,
     plot_recall_targets(
         equality_of_opportunity_result['agent']['tpr_targets'][(0, 1)],
         os.path.join(plotting_dir, 'target_recall_dynamic.png'))
-
-    with file_util.open(
-        os.path.join(plotting_dir, 'cumulative_recall_static.txt'),
-        'w') as outfile:
-      np.savetxt(
-          outfile, static_equality_of_opportunity_result['metric_results']
-          ['cumulative_recall'])

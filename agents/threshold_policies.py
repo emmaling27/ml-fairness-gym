@@ -200,7 +200,7 @@ def _threshold_from_tpr_and_fpr(roc, tpr_target, fpr_target, rng):
     min_loss = 1000
     min_loss_idx = -1
     for idx in range(low, high):
-      loss = abs(tpr_list[idx] - tpr_target)**2 + abs(tpr_list[idx] - tpr_target)**2
+      loss = abs(tpr_list[idx] - tpr_target)**2 + abs(fpr_list[idx] - fpr_target)**2
       if loss < min_loss:
         min_loss = loss 
         min_loss_idx = idx
@@ -409,8 +409,8 @@ def epsilon_equality_of_opportunity_thresholds(group_predictions,
       bounds=[0, 1],
       method="bounded",
       options={"maxiter": 100})
-  return {groups[0]: _threshold_from_tpr(roc[groups[0]], opt.x+ epsilon, rng=rng),
-          groups[1]: _threshold_from_tpr(roc[groups[1]], opt.x, rng=rng)}
+  return {groups[0]: _threshold_from_tpr(roc[groups[0]], opt.x, rng=rng),
+          groups[1]: _threshold_from_tpr(roc[groups[1]], opt.x + epsilon, rng=rng)}
 
 
 def equalized_odds_thresholds(group_predictions,
@@ -440,7 +440,6 @@ def equalized_odds_thresholds(group_predictions,
   Raises: ValueError if the keys of group_predictions and group_labels are not
     the same.
   """
-
   if set(group_predictions.keys()) != set(group_labels.keys()):
     raise ValueError("group_predictions and group_labels have mismatched keys.")
 
