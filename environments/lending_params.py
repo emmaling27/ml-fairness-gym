@@ -198,14 +198,16 @@ def _credit_cluster_builder(group_membership,
 # Likelihoods of credit score given group_id.
 DELAYED_IMPACT_CLUSTER_PROBS = (
     # Original
+    (0.0, 0.1, 0.1, 0.2, 0.3, 0.3, 0.0),
+    (0.0, 0.1, 0.1, 0.2, 0.3, 0.3, 0.0),
     # (0.0, 0.1, 0.1, 0.2, 0.3, 0.3, 0.0),
     # (0.1, 0.1, 0.2, 0.3, 0.3, 0.0, 0.0),
     # uniform vs peak
     # (0.15, 0.14, 0.14, 0.14, 0.14, 0.14, 0.15),
     # (0.0, 0.1, 0.2, 0.4, 0.2, 0.1, 0.0),
     # peaks at 2 and at 4
-    (0.1, 0.2, 0.4, 0.2, 0.1, 0.0, 0.0),
-    (0.0, 0.0, 0.1, 0.2, 0.4, 0.2, 0.1)
+    # (0.0, 0.0, 0.1, 0.2, 0.4, 0.2, 0.1),
+    # (0.1, 0.2, 0.4, 0.2, 0.1, 0.0, 0.0),
 )
 # Likelihoods of loan repayment given credit score.
 DELAYED_IMPACT_SUCCESS_PROBS = (0.1, 0.2, 0.45, 0.6, 0.65, 0.7, 0.7)
