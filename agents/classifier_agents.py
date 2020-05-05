@@ -253,6 +253,33 @@ class ScoringAgent(core.Agent):
                   stratify_by=self.params.group_key),
               cost_matrix=self.params.cost_matrix,
               rng=self.rng))
+    
+    if self.params.threshold_policy == threshold_policies.ThresholdPolicy.EPSILON_EQUALIZE_OPPORTUNITY:
+      self.group_specific_thresholds = (
+          threshold_policies.epsilon_equality_of_opportunity_thresholds(
+              group_predictions=self._recursively_apply_score_transform(
+                  training_corpus.get_features(
+                      stratify_by=self.params.group_key)),
+              group_labels=training_corpus.get_labels(
+                  stratify_by=self.params.group_key),
+              group_weights=training_corpus.get_weights(
+                  stratify_by=self.params.group_key),
+              cost_matrix=self.params.cost_matrix,
+              epsilon=0.1,
+              rng=self.rng))
+
+    if self.params.threshold_policy == threshold_policies.ThresholdPolicy.EQUALIZE_ODDS:
+      self.group_specific_thresholds = (
+          threshold_policies.equalized_odds_thresholds(
+              group_predictions=self._recursively_apply_score_transform(
+                  training_corpus.get_features(
+                      stratify_by=self.params.group_key)),
+              group_labels=training_corpus.get_labels(
+                  stratify_by=self.params.group_key),
+              group_weights=training_corpus.get_weights(
+                  stratify_by=self.params.group_key),
+              cost_matrix=self.params.cost_matrix,
+              rng=self.rng))
 
   def _get_threshold(self, group_id):
     # Try to get a group specific threshold but fall back to the global

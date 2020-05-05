@@ -37,6 +37,7 @@ from metrics import value_tracking_metrics
 
 MAXIMIZE_REWARD = threshold_policies.ThresholdPolicy.MAXIMIZE_REWARD
 EQUALIZE_OPPORTUNITY = threshold_policies.ThresholdPolicy.EQUALIZE_OPPORTUNITY
+EQUALIZE_ODDS = threshold_policies.ThresholdPolicy.EQUALIZE_ODDS
 
 
 @attr.s
@@ -119,6 +120,12 @@ class Experiment(core.Params):
             lending_metrics.CreditDistribution(env, step=-1),
         'recall':
             error_metrics.RecallMetric(
+                env,
+                prediction_fn=lambda x: x.action,
+                ground_truth_fn=lambda x: not x.state.will_default,
+                stratify_fn=lambda x: str(x.state.group_id)),
+        'fall_out':
+            error_metrics.FallOutMetric(
                 env,
                 prediction_fn=lambda x: x.action,
                 ground_truth_fn=lambda x: not x.state.will_default,

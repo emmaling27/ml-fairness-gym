@@ -40,6 +40,7 @@ class ThresholdPolicy(enum.Enum):
   SINGLE_THRESHOLD = "single_threshold"
   MAXIMIZE_REWARD = "maximize_reward"
   EQUALIZE_OPPORTUNITY = "equalize_opportunity"
+  EPSILON_EQUALIZE_OPPORTUNITY = "epsilon_equalize_opportunity"
   EQUALIZE_ODDS = "equalize_odds"
 
 
@@ -325,10 +326,91 @@ def equality_of_opportunity_thresholds(group_predictions,
       bounds=[0, 1],
       method="bounded",
       options={"maxiter": 100})
-  print(opt)
   return ({
       group: _threshold_from_tpr(roc[group], opt.x, rng=rng) for group in groups
   })
+
+def epsilon_equality_of_opportunity_thresholds(group_predictions,
+                                       group_labels,
+                                       group_weights,
+                                       cost_matrix,
+                                       epsilon=0,
+                                       rng=None):
+  """Finds thresholds that equalize opportunity while maximizing reward with an epsilon
+  corrective factor.
+
+  Since there are many different thresholds where equality of opportunity
+  constraints can hold, we simultaneously maximize reward described by a reward
+  matrix.
+
+  Args: group_predictions: A dict mapping from group identifiers to predictions
+    for instances from that group. group_labels: A dict mapping from group
+    identifiers to labels for instances from that group. group_weights: A dict
+    mapping from group identifiers to weights for instances from that group.
+    cost_matrix: A CostMatrix. rng: A `np.random.RandomState`.
+
+  Returns: A dict mapping from group identifiers to thresholds such that recall
+    is epsilon greater for the disadvantaged group.
+
+  Raises: ValueError if the keys of group_predictions and group_labels are not
+    the same.
+  """
+
+  if set(group_predictions.keys()) != set(group_labels.keys()):
+    raise ValueError("group_predictions and group_labels have mismatched keys.")
+
+  if rng is None:
+    rng = np.random.RandomState()
+
+  groups = sorted(group_predictions.keys())
+  roc = {}
+
+  if group_weights is None:
+    group_weights = {}
+
+  for group in groups:
+    if group not in group_weights or group_weights[group] is None:
+      # If weights is unspecified, use equal weights.
+      group_weights[group] = [1 for _ in group_labels[group]]
+
+    assert len(group_labels[group]) == len(group_weights[group]) == len(
+        group_predictions[group])
+
+    fprs, tprs, thresholds = sklearn_metrics.roc_curve(
+        y_true=group_labels[group],
+        y_score=group_predictions[group],
+        sample_weight=group_weights[group])
+
+    roc[group] = (fprs, np.nan_to_num(tprs), thresholds)
+
+  def negative_reward(tpr_target):
+    """Returns negative reward suitable for optimization by minimization."""
+
+    my_reward = 0
+    for group in groups:
+      weights_ = []
+      predictions_ = []
+      labels_ = []
+      for thresh_prob, threshold in _threshold_from_tpr(
+          roc[group], tpr_target, rng=rng).iteritems():
+        labels_.extend(group_labels[group])
+        for weight, prediction in zip(group_weights[group],
+                                      group_predictions[group]):
+          weights_.append(weight * thresh_prob)
+          predictions_.append(prediction >= threshold)
+      confusion_matrix = sklearn_metrics.confusion_matrix(
+          labels_, predictions_, sample_weight=weights_)
+
+      my_reward += np.multiply(confusion_matrix, cost_matrix.as_array()).sum()
+    return -my_reward
+
+  opt = scipy.optimize.minimize_scalar(
+      negative_reward,
+      bounds=[0, 1],
+      method="bounded",
+      options={"maxiter": 100})
+  return {groups[0]: _threshold_from_tpr(roc[groups[0]], opt.x+ epsilon, rng=rng),
+          groups[1]: _threshold_from_tpr(roc[groups[1]], opt.x, rng=rng)}
 
 
 def equalized_odds_thresholds(group_predictions,

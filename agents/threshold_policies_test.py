@@ -28,8 +28,6 @@ from six.moves import range
 from sklearn import metrics as sklearn_metrics
 
 COST_MATRIX = params.CostMatrix(tp=1.5, fp=-1.0, fn=-0.3, tn=2.0)
-
-
 EPSILON = 1e-6
 
 
@@ -63,6 +61,40 @@ class ThresholdPoliciesTest(absltest.TestCase):
 
     self.assertLess(np.abs(group_a_recall - group_b_recall), 1e-3)
 
+  def test_epsilon_equality_of_opportunity_holds(self):
+    rng = np.random.RandomState(100)
+    group_a_predictions = rng.rand(100000)
+    group_a_labels = rng.choice([0, 1], p=[0.5, 0.5], size=100000)
+
+    group_b_predictions = rng.normal(size=100000)
+    group_b_labels = rng.choice([0, 1], p=[0.2, 0.8], size=100000)
+
+    thresholds = threshold_policies.epsilon_equality_of_opportunity_thresholds(
+        group_predictions={
+            'a': group_a_predictions,
+            'b': group_b_predictions
+        },
+        group_labels={
+            'a': group_a_labels,
+            'b': group_b_labels
+        },
+        group_weights=None,
+        cost_matrix=COST_MATRIX,
+        epsilon=0.2,
+        rng=rng)
+
+    group_a_recall = ((group_a_predictions > thresholds['a'].sample()) *
+                      group_a_labels).sum() / group_a_labels.sum()
+    group_b_recall = ((group_b_predictions > thresholds['b'].sample()) *
+                      group_b_labels).sum() / group_b_labels.sum()
+
+    print(group_a_recall)
+    print(group_b_recall)
+
+    self.assertGreater(group_b_recall, group_a_recall)
+    self.assertLess(np.abs(group_a_recall - group_b_recall), 1e-3 + 0.1)
+
+
   def test_equalized_odds_holds(self):
     rng = np.random.RandomState(100)
     group_a_predictions = rng.rand(100000)
@@ -89,7 +121,14 @@ class ThresholdPoliciesTest(absltest.TestCase):
     group_b_recall = ((group_b_predictions > thresholds['b'].sample()) *
                       group_b_labels).sum() / group_b_labels.sum()
 
+    group_a_fall_out = ((group_a_predictions < thresholds['a'].sample()) *
+                      group_a_labels).sum() / (100000 - group_a_labels.sum())
+    group_b_fall_out = ((group_b_predictions < thresholds['b'].sample()) *
+                      group_b_labels).sum() / (100000 - group_b_labels.sum())
+
     self.assertLess(np.abs(group_a_recall - group_b_recall), 1e-3)
+    self.assertLess(np.abs(group_a_fall_out - group_b_fall_out), 1e-3)
+
 
   def test_reward_is_maximized(self):
     rng = np.random.RandomState(100)

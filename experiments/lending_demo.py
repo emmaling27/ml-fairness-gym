@@ -1,17 +1,16 @@
-# coding=utf-8
-# Copyright 2020 The ML Fairness Gym Authors.
+# coding=utf-8 Copyright 2020 The ML Fairness Gym Authors.
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy of
+# the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations under
+# the License.
 
 """Main file to run lending experiments for demonstration purposes."""
 
@@ -34,6 +33,8 @@ flags.DEFINE_string('outfile', None, 'Path to write out results.')
 flags.DEFINE_string('plots_directory', None, 'Directory to write out plots.')
 flags.DEFINE_bool('equalize_opportunity', False,
                   'If true, apply equality of opportunity constraints.')
+flags.DEFINE_bool('epsilon_equalize_opportunity', False,
+                  'If true, apply equality of opportunity constraints.')
 flags.DEFINE_bool('equalize_odds', False,
                   'If true, apply equalized odds constraints.')
 flags.DEFINE_integer('num_steps', 10000,
@@ -47,10 +48,24 @@ json.encoder.FLOAT_REPR = lambda o: repr(round(o, 3))
 MAXIMIZE_REWARD = threshold_policies.ThresholdPolicy.MAXIMIZE_REWARD
 EQUALIZE_OPPORTUNITY = threshold_policies.ThresholdPolicy.EQUALIZE_OPPORTUNITY
 EQUALIZE_ODDS = threshold_policies.ThresholdPolicy.EQUALIZE_ODDS
+EPSILON_EQUALIZE_OPPORTUNITY = threshold_policies.ThresholdPolicy.EPSILON_EQUALIZE_OPPORTUNITY
 
 def main(argv):
   if len(argv) > 1:
     raise app.UsageError('Too many command-line arguments.')
+
+  if FLAGS.equalize_opportunity:
+    threshold = EQUALIZE_OPPORTUNITY
+    title = 'Eq. opportunity'
+  elif FLAGS.equalize_odds:
+    threshold = EQUALIZE_ODDS
+    title = 'Eq. Odds'
+  elif FLAGS.epsilon_equalize_opportunity:
+    threshold = EPSILON_EQUALIZE_OPPORTUNITY
+    title = 'Epsilon Eq. opportunity'
+  else:
+    threshold = MAXIMIZE_REWARD
+    title = 'Max Reward'
 
   np.random.seed(100)
   group_0_prob = 0.5
@@ -64,11 +79,7 @@ def main(argv):
       cluster_shift_increment=0.01,
       include_cumulative_loans=True,
       return_json=False,
-      threshold_policy=(EQUALIZE_ODDS if FLAGS.equalize_odds else
-                        MAXIMIZE_REWARD)).run()
-
-  title = ('Eq. opportunity' if FLAGS.equalize_opportunity else 'Max reward')
-  title = ('Eq. Odds' if FLAGS.equalize_odds else 'Max reward')
+      threshold_policy=threshold).run()
 
   metrics = result['metric_results']
 
@@ -107,6 +118,15 @@ def main(argv):
       metrics['recall'],
       title='Recall - %s' % title,
       path=os.path.join(FLAGS.plots_directory, 'recall.png')
+      if FLAGS.plots_directory else None,
+      figure=fig)
+
+  fig = plt.figure()
+  lending_plots.plot_bars(
+      metrics['fall_out'],
+      title='Fall Out - %s' % title,
+      ylabel='Fall Out',
+      path=os.path.join(FLAGS.plots_directory, 'fall_out.png')
       if FLAGS.plots_directory else None,
       figure=fig)
 
