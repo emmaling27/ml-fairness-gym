@@ -151,6 +151,7 @@ class Experiment(core.Params):
             'name': env.__class__.__name__,
             'params': env.initial_params,
             'history': env.history,
+            'env': env
         },
         'agent': {
             'name': agent.__class__.__name__,
