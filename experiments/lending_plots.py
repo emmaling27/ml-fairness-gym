@@ -53,7 +53,7 @@ class PlotTypes(enum.Enum):
   DISTRIBUTION_DISTANCE = 6
 
 class DistanceMetrics(enum.Enum):
-  # MEAN = 1
+  MEAN = 1
   TOTAL_VARIATION = 2
   KL_DIVERGENCE = 3
   EARTH_MOVER = 4
@@ -229,7 +229,10 @@ def _distribution_difference(credit_distribution, distance_metric):
   """Computes the difference between distributions of group1 and group2."""
   group1_dist = np.array(credit_distribution['0']) # Better-off group
   group2_dist = np.array(credit_distribution['1'])
-  if distance_metric == DistanceMetrics.TOTAL_VARIATION:
+  if distance_metric == DistanceMetrics.MEAN:
+      return np.abs((np.dot(np.arange(7), group1_dist) - np.dot(np.arange(7),
+        group2_dist)) / 7)
+  elif distance_metric == DistanceMetrics.TOTAL_VARIATION:
     return np.max(np.abs(group1_dist - group2_dist))
   elif distance_metric == DistanceMetrics.KL_DIVERGENCE:
     # KL divergence undefined if prob = 0, so we approximate 0 by .01
